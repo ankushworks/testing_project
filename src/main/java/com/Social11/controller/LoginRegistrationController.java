@@ -1,18 +1,33 @@
 package com.Social11.controller;
 
-import com.Social11.Dao.IuserRepository;
-import com.Social11.helper.Utils;
-import com.Social11.models.UserEntity;
-import com.Social11.service.IjavaMailService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import java.security.Principal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import java.security.Principal;
-import java.util.HashMap;
-import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.Social11.Dao.IuserEntityTemp;
+import com.Social11.Dao.IuserRepository;
+import com.Social11.helper.JwtTokenUtil;
+import com.Social11.models.UserEntity;
+import com.Social11.models.UserEntityTemp;
+import com.Social11.service.IjavaMailService;
 
 @RestController
 public class LoginRegistrationController {
@@ -29,66 +44,73 @@ public class LoginRegistrationController {
 	@Autowired
 	private PasswordEncoder bcyrtp;
 	
+	
+	@Autowired
+	private IuserEntityTemp tempentity;
+	
 	@GetMapping("/createUser")
 	public String createUser() {
 		return "User Account page";
 	}
 	
-
-	@PostMapping("/create_user")
-	public Map<String,String> createUser(@RequestBody UserEntity userprofile,HttpSession session){
+	@PostMapping("/CreateProfile")
+	public Map<String,String> createUser(@RequestBody UserEntityTemp userprofile,HttpSession session) {
 		Map<String,String> mp = new HashMap<>();
 		String message;
-
-		try{
-			if(!userprofile.getEmail_address().isEmpty() && !userprofile.getPassword().isEmpty() && !userprofile.getUsername().isEmpty()){
-
-				if(Repository.findByemail(userprofile.getEmail_address()) != null || Repository.findByusername(userprofile.getUsername()) != null){
-					System.out.println();
-					mp.put("message" , "User with this email or username already exist ");
-					return mp;
-				}else{
-					System.out.println(userprofile.getEmail_address());
-					Long otp = Utils.generateOtp();
-					message = mailService.SendMailToEmail(userprofile.getEmail_address() , otp);
-					session.setAttribute("generatedOtp" , otp);
-
-
-					if(message != null){
-						userprofile.setDateandtime(Utils.getCurrentDateAndTime());
-						userprofile.setRole("user");
-						session.setAttribute("email", userprofile.getEmail_address());
-						session.setAttribute("date", userprofile.getDateandtime());
-						session.setAttribute("role", userprofile.getRole());
-						session.setAttribute("country", userprofile.getCountry());
-						session.setAttribute("firstname", userprofile.getFirstname());
-						session.setAttribute("id", userprofile.getId());
-						session.setAttribute("lastname", userprofile.getLastname());
-						session.setAttribute("username", userprofile.getUsername());
-						session.setAttribute("password", userprofile.getPassword());
-						mp.put("text", "Otp Send Succesfully check your email for otp");
-						mp.put("response", "200 OK");
-						return mp;
-					}else{
-						mp.put("text", "Opps something went wrong opt not send");
-						mp.put("response", "400 Bad Request");
-						return mp;
-					}
-				}
-			}else{
-				mp.put("message"  , "fields cannot be empty");
+		// check email is already present in database or not
+		try {
+			UserEntity existinguser=Repository.findByusername(userprofile.getUsername());
+			String email = userprofile.getEmail_address();
+			if(existinguser!=null) {
+				// user already exist
+				mp.put("text", "User already exist");
 				return mp;
 			}
-
-		}catch (Exception ex){
+			Long OTPcode  = (long)((Math.random()*9*Math.pow(5,6))+Math.pow(5,6));
+			System.out.println(email);
+			System.out.println(OTPcode);
+			message =  mailService.SendMailToEmail(email,OTPcode);
+//			session.setAttribute("generatedOtp", OTPcode);
+			userprofile.setOtp(OTPcode);
+			
+			if(message!="") {
+			// Saving user data into database
+			// userprofile.setPassword(encoder.encode(userprofile.getPassword()));
+				
+			DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+			LocalDateTime now = LocalDateTime.now();
+			
+			userprofile.setDateandtime(dtf.format(now));
+			
+			
+//			userprofile.setRole("user");
+//			session.setAttribute("email", userprofile.getEmail_address());
+//			session.setAttribute("date", userprofile.getDateandtime());
+//			session.setAttribute("role", userprofile.getRole());
+//			session.setAttribute("country", userprofile.getCountry());
+//			session.setAttribute("firstname", userprofile.getFirstname());
+//			session.setAttribute("id", userprofile.getId());
+//			session.setAttribute("lastname", userprofile.getLastname());
+//			session.setAttribute("username", userprofile.getUsername());
+//			session.setAttribute("password", userprofile.getPassword());
+			tempentity.save(userprofile);
+			mp.put("text", "Otp Send Succesfully check your email for otp");
+			mp.put("response", "200 OK");
+			mp.put("email", userprofile.getEmail_address());
+			return mp;
+			}
+			else {
+				mp.put("text", "Opps something went wrong opt not send");
+				mp.put("response", "400 Bad Request");
+				return mp;
+			}
+		}
+		catch(Exception e) {
 			System.out.println("Exception while creating account");
 			mp.put("text", "Exception occur");
 			return mp;
 		}
 	}
-
-
-
 	
 	@GetMapping("otpform")
 	public String otpform() {
@@ -96,42 +118,53 @@ public class LoginRegistrationController {
 	}
 	
 	@PostMapping("/otpVerification")
-	public Map<String,String> verifyOtp(HttpServletRequest request,HttpSession session) {
+	public Map<String,String> verifyOtp(@RequestParam("otp") long otp,@RequestParam("email") String email) {
 		Map<String,String> mp = new HashMap<>();
-		String otp=(String)request.getParameter("otp");
-		System.out.println(otp);
-		Long otp1 = Long.valueOf(otp);
-		System.out.println(otp1);
-		Long OTPcode=(Long) session.getAttribute("generatedOtp");
-		System.out.println(OTPcode);
-		if(OTPcode.equals(otp1)) {
-			UserEntity entity = new UserEntity();
-			entity.setEmail_address((String)session.getAttribute("email"));
-			entity.setCountry((String)session.getAttribute("country"));
-			entity.setDateandtime((String)session.getAttribute("date"));
-			entity.setEnabled(true);
-			entity.setFirstname((String)session.getAttribute("firstname"));
-			entity.setId((Integer)session.getAttribute("id"));
-			entity.setLastname((String)session.getAttribute("lastname"));
-			entity.setPassword(bcyrtp.encode((String)session.getAttribute("password")));
-			entity.setRole((String)session.getAttribute("role"));
-			entity.setUsername((String)session.getAttribute("username"));
-			Repository.save(entity);
-			mp.put("text", "User Saved Succesfully");
-			mp.put("response", "200 OK");
-			return mp;
+		System.out.println("hello");
+		System.out.println("my otp is :"+otp+" email is :"+email);
+		try {
+		if(email!=""){
+			System.out.println("working succesfully");
+			UserEntityTemp userTemp=this.tempentity.findByemail(email);
+			Long otp1 = Long.valueOf(otp);
+			System.out.println(userTemp);
+			Long OTPcode= userTemp.getOtp();
+			System.out.println(OTPcode);
+			if(OTPcode.equals(otp1)) {
+				UserEntity entity = new UserEntity();
+				entity.setEmail_address(userTemp.getEmail_address());
+				entity.setUsername(userTemp.getUsername());
+				entity.setPassword(bcyrtp.encode(userTemp.getPassword()));
+				entity.setDateandtime(userTemp.getDateandtime());
+				entity.setFirstname(userTemp.getFirstname());
+				Repository.save(entity);
+				System.out.println("working or not");
+				this.tempentity.deletebyemail(email);
+				System.out.println("noot workign");
+				mp.put("text", "User Saved Succesfully");
+				mp.put("response", "200 OK");
+				return mp;
+			}
+			else {
+				mp.put("text", "Incorrect otp");
+				mp.put("response", "400 Bad Request");
+				return mp;
+			}
 		}
 		else {
-			mp.put("text", "Incorrect otp");
-			mp.put("response", "400 Bad Request");
-			return mp;
+			Map<String,String> mp1 = new HashMap<>();
+			mp1.put("Error", "Email cannot be empty");
+			return mp1;
+		}
+		}
+		catch(Exception e) {
+			System.out.println("Error occured "+e);
+			Map<String,String> mp1 = new HashMap<>();
+			mp1.put("error", "Incorrect email");
+			return mp1;
 		}
 	}
-
-
-
-
-
+	
 	@GetMapping("/forgot")
 	public String otpform(Principal principal) {
 		System.out.println("hello");
@@ -139,16 +172,19 @@ public class LoginRegistrationController {
 	}
 	
 	@PostMapping("/verifyOtp")
-	public Map<String,String> otpverify(@RequestParam("email") String email,HttpSession session) {
+	public Map<String,String> otpverify(@RequestParam("email") String email) {
 		Map<String,String> mp  = new HashMap<>();
 		System.out.println("Otp form page "+email);
 		Long OTPcode  = (long)((Math.random()*9*Math.pow(5,6))+Math.pow(5,6));
 		UserEntity entity=Repository.findByemail(email);
-		session.setAttribute("Otp", OTPcode);
-		session.setAttribute("Email", email);
 		// In order to confirm the user is registered user or not we send otp in registered email
 		if(entity!=null) {
+			UserEntityTemp tentity = new UserEntityTemp();
+			tentity.setEmail_address(entity.getEmail_address());
+			tentity.setOtp(OTPcode);
+			this.tempentity.save(tentity);
 			mp.put("text", "email send succesfully");
+			mp.put("email",entity.getEmail_address());
 			mp.put("response", "200 OK");
 			String message = mailService.SendMailToEmail(email,OTPcode);
 			return mp;
@@ -162,14 +198,14 @@ public class LoginRegistrationController {
 	}
 
 	@PostMapping("/checkotp")
-	public Map<String,String> checkOtp(HttpSession session,HttpServletRequest request) {
+	public Map<String,String> checkOtp(@RequestParam("otp") long otp,@RequestParam("email") String email) {
 		Map<String,String> mp  = new HashMap<>();
-		Long otp = Long.valueOf(request.getParameter("otp"));
-		System.out.println(otp);
-		Long Otp = (Long)(session.getAttribute("Otp"));
-		System.out.println(Otp);
-		if(otp.equals(Otp)) {
+		UserEntityTemp entity =this.tempentity.findByemail(email);
+		Long Otp = entity.getOtp();
+		Long otp1 = Long.valueOf(otp);
+		if(otp1.equals(Otp)) {
 			mp.put("text", "Otp is Correct");
+			mp.put("email",entity.getEmail_address());
 			mp.put("response", "Success");
 			return mp;	
 		}
@@ -181,16 +217,16 @@ public class LoginRegistrationController {
 	}
 	
 	@PostMapping("/changePassword")
-	public Map<String,String> changepassword(HttpServletRequest request,HttpSession session) {
+	public Map<String,String> changepassword(@RequestParam
+			("password") String password,@RequestParam("cpassword") String cpassword,
+			@RequestParam("email") String email) {
 		Map<String,String> mp  = new HashMap<>();
-		String password = request.getParameter("password");
-		String cpassword = request.getParameter("cpassword");
 		if(password.equals(cpassword)) {
 			try {
-				String email=(String)session.getAttribute("Email");
 				UserEntity user=Repository.findByemail(email);
 				user.setPassword(bcyrtp.encode(password));
 				this.Repository.save(user);
+				this.tempentity.deletebyemail(email);
 				System.out.println("password changed");
 				mp.put("text", "Password Changed Succesfully");
 				mp.put("response", "200");

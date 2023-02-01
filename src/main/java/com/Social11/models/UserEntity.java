@@ -27,7 +27,7 @@ public class UserEntity {
 	private String userUrl;
 	private boolean enabled;
 	private String role;
-
+	
 	public String getRole() {
 		return role;
 	}
@@ -96,23 +96,15 @@ public class UserEntity {
 		this.enabled = enabled;
 	}
 	
-	
-	
-	public UserEntity(int id, String email_address, String username, String password, String country,
-			String dateandtime, String firstname, String lastname, String userUrl, boolean enabled, String role) {
+	public UserEntity(String email_address, String username, String password,
+			String dateandtime,int otp) {
 		super();
-		this.id = id;
 		this.email_address = email_address;
 		this.username = username;
 		this.password = password;
-		this.country = country;
 		this.dateandtime = dateandtime;
-		this.firstname = firstname;
-		this.lastname = lastname;
-		this.userUrl = userUrl;
-		this.enabled = enabled;
-		this.role = role;
 	}
+	
 	@Override
 	public String toString() {
 		return "UserEntity [id=" + id + ", email_address=" + email_address + ", username=" + username + ", password="

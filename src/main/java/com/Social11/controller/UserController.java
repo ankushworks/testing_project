@@ -28,6 +28,7 @@ import com.Social11.models.Post_data;
 import com.Social11.models.UserEntity;
 import com.Social11.models.UserFriends;
 import com.Social11.models.UserPost;
+import com.Social11.models.UserPostComment;
 import com.Social11.models.UserPostLike;
 import com.Social11.models.Userfriend_request;
 import com.Social11.service.IjavaMailService;
@@ -55,8 +56,7 @@ public class UserController {
 	
 	@Autowired
 	private IuserPostLikeRepo postlike;
-	
-	
+
 	@GetMapping("/user")
 	public UserEntity homepage(Principal principal,HttpSession session) {
 		String name = userdetailservice.currentLoggedInUser();
@@ -207,4 +207,10 @@ public class UserController {
 			return mp;
 		}
 	}
+	
+	@PostMapping("user/comment/102")
+	public Map<String,String> postComment(@RequestBody UserPostComment post_comment, HttpSession session){
+		return null;
+	}
+	
 }
