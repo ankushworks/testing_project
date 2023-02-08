@@ -1,40 +1,20 @@
 package com.Social11.controller;
 
+import com.Social11.Dao.*;
+import com.Social11.helper.JwtTokenUtil;
+import com.Social11.helper.JwtUserDetailService;
+import com.Social11.models.*;
+import com.Social11.service.PostService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpSession;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.servlet.http.HttpSession;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.Social11.Dao.FriendRepository;
-import com.Social11.Dao.IUserFriendReqRepo;
-import com.Social11.Dao.IuserPostLikeRepo;
-import com.Social11.Dao.IuserPostRepos;
-import com.Social11.Dao.IuserPostdata;
-import com.Social11.Dao.IuserRepository;
-import com.Social11.helper.JwtTokenUtil;
-import com.Social11.helper.JwtUserDetailService;
-import com.Social11.models.Post_data;
-import com.Social11.models.UserEntity;
-import com.Social11.models.UserFriends;
-import com.Social11.models.UserPost;
-import com.Social11.models.UserPostComment;
-import com.Social11.models.UserPostLike;
-import com.Social11.models.UserProfile;
-import com.Social11.models.Userfriend_request;
-import com.Social11.service.PostService;
 
 @RestController
 public class UserController {
