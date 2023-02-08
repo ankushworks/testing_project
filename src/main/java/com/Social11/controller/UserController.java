@@ -1,37 +1,20 @@
 package com.Social11.controller;
 
+import com.Social11.Dao.*;
+import com.Social11.helper.JwtTokenUtil;
+import com.Social11.helper.JwtUserDetailService;
+import com.Social11.models.*;
+import com.Social11.service.PostService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpSession;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.servlet.http.HttpSession;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.Social11.Dao.FriendRepository;
-import com.Social11.Dao.IUserFriendReqRepo;
-import com.Social11.Dao.IuserPostLikeRepo;
-import com.Social11.Dao.IuserPostRepos;
-import com.Social11.Dao.IuserPostdata;
-import com.Social11.Dao.IuserRepository;
-import com.Social11.Dao.UserRepository;
-import com.Social11.helper.JwtUserDetailService;
-import com.Social11.models.Post_data;
-import com.Social11.models.UserEntity;
-import com.Social11.models.UserFriends;
-import com.Social11.models.UserPost;
-import com.Social11.models.UserPostComment;
-import com.Social11.models.UserPostLike;
-import com.Social11.models.Userfriend_request;
-import com.Social11.service.IjavaMailService;
 
 @RestController
 public class UserController {
@@ -56,16 +39,62 @@ public class UserController {
 	
 	@Autowired
 	private IuserPostLikeRepo postlike;
-
-	@GetMapping("/user")
-	public UserEntity homepage(Principal principal,HttpSession session) {
-		String name = userdetailservice.currentLoggedInUser();
-		UserEntity user = userdata.findByusername(name);
-		session.setAttribute("user_id", user.getId());
-		return user;
-	}		
 	
-	@PostMapping("user/post")
+	@Autowired
+	private PostService postService;
+	
+	@Autowired
+	private JwtTokenUtil jwtTokenUtil;
+	
+//	@GetMapping("/user")
+//	public UserProfile homepage(Principal principal,HttpSession session,@RequestHeader("Authorization") String bearerToken) {
+//		System.out.println(bearerToken);
+//		bearerToken = bearerToken.substring(7);
+//		Map<String,Object> claims=this.jwtTokenUtil.getAllClaimsFromToken(bearerToken);
+//
+//		Map<String,Object> mp = new HashMap<>();
+//		String username= (String)claims.get("Username");
+//		int id = (int)claims.get("Id");
+//		System.out.println(id);
+//		UserProfile profile = new UserProfile();
+//		if(this.userpost.fetchMyPost(id) != null) {
+//			List<Post_data> posts = this.userpost.fetchMyPost(id);
+//			profile.setTotalPost(this.userpost.totalpost(id));
+//			System.out.println(posts.toString());
+//			profile.setAllpost(this.userpost.fetchMyPost(id));
+//		}
+//		profile.setProfile_id(id);
+//		profile.setUsername(username);
+//		return profile;
+//	}
+
+
+
+	@GetMapping("/profile")
+	public UserProfile homepage(Principal principal,HttpSession session,@RequestHeader("Authorization") String bearerToken) {
+		System.out.println(bearerToken);
+		bearerToken = bearerToken.substring(7);
+		Map<String,Object> claims=this.jwtTokenUtil.getAllClaimsFromToken(bearerToken);
+
+		Map<String,Object> mp = new HashMap<>();
+		String username= (String)claims.get("Username");
+		int id = (int)claims.get("Id");
+		System.out.println(id);
+		UserProfile profile = new UserProfile();
+		if(this.userpost.fetchMyPost(id) != null) {
+			List<Post_data> posts = this.userpost.fetchMyPost(id);
+			profile.setTotalPost(this.userpost.totalpost(id));
+			System.out.println(posts.toString());
+			profile.setAllpost(this.userpost.fetchMyPost(id));
+		}
+		profile.setProfile_id(id);
+		profile.setUsername(username);
+		return profile;
+	}
+
+
+		
+	@PostMapping("user/home/post")
 	public Map<String,String> userpost(@RequestBody Post_data user_post,HttpSession session) {
 		try {
 			int userid=(Integer)session.getAttribute("user_id");
@@ -99,11 +128,14 @@ public class UserController {
 	}
 	
 //	fetch the friends post
-	@GetMapping("user/home")
-	public List<Post_data> getallpost(HttpSession session) {
-		int userid=(Integer)session.getAttribute("user_id");
-		List<Post_data> lg= this.userpost.fetchAllPost2(userid);
-		return lg;
+	@GetMapping("user/home/{page}")
+	public List<Post_data> getallpost(@RequestHeader("Authorization") String bearerToken , @PathVariable("page") Integer page, HttpSession session) {
+		bearerToken = bearerToken.substring(7);
+		Map<String,Object> claims=this.jwtTokenUtil.getAllClaimsFromToken(bearerToken);
+		int id = (int)claims.get("Id");
+		System.out.println(id);
+		List<Post_data> posts = this.postService.findfriendspost(id,page);
+		return posts;
 	}
 	
 //	User can send Friend request to many users
@@ -137,7 +169,7 @@ public class UserController {
 		System.out.println(user_id);
 		try {
 //		first entry from user to friend id
-	//  Dateandtime  		
+//      Dateandtime  		
 		DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");  
 		LocalDateTime now = LocalDateTime.now();  
 		UserFriends userfriends = new UserFriends(user_id,from,dtf.format(now));

@@ -32,6 +32,7 @@ public class JwtRequestFilter extends OncePerRequestFilter{
 	@Autowired
 	private JwtBlackListRepository repository;
 
+	
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws ServletException, IOException {

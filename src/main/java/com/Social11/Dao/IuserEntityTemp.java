@@ -21,5 +21,4 @@ public interface IuserEntityTemp extends JpaRepository<UserEntityTemp,Integer> {
 	
 //	@Query("insert into usertemp123(id,email_address,otp) values(109,'paramjeetsingh123@gmail.com',12919)", nativeQuery = true)
 //	public int updateRecordfromtable(@Param("postid") int postid , @Param("userid") int userid , @Param("report") int report);
-	
 }

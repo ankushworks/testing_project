@@ -7,5 +7,4 @@ import com.Social11.models.UserPost;
 public interface IuserPostdata extends JpaRepository<UserPost,Integer>{
 	
 	
-	
 }

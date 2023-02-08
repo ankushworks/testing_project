@@ -5,10 +5,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import com.Social11.Dao.IuserRepository;
 import com.Social11.models.UserEntity;
 
 import io.jsonwebtoken.Claims;
@@ -24,6 +26,9 @@ public class JwtTokenUtil {
 	
 	@Value("harmeet@123")
 	private String secret;
+	
+	@Autowired
+	private IuserRepository userRepository;
 
 	//retrieve username from jwt token
 	public String getUsernameFromToken(String token) {
@@ -44,7 +49,7 @@ public class JwtTokenUtil {
 		return claimsResolver.apply(claims);
 	}
     //for retrieveing any information from token we will need the secret key
-	private Claims getAllClaimsFromToken(String token) {
+	public Claims getAllClaimsFromToken(String token) {
 		return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
 	}
 
@@ -56,10 +61,14 @@ public class JwtTokenUtil {
 
 	//generate token for user
 	public String generateToken(UserDetails userDetails) {
+		UserEntity userentity= this.userRepository.findByusername(userDetails.getUsername());
 		Map<String, Object> claims = new HashMap<>();
+		claims.put("Email", userentity.getEmail_address());
+		claims.put("Fname", userentity.getFirstname());
+		claims.put("Id", userentity.getId());
+		claims.put("Username", userentity.getUsername());
 		return doGenerateToken(claims, userDetails.getUsername());
 	}
-
 	
 	//while creating the token -
 	//1. Define  claims of the token, like Issuer, Expiration, Subject, and the ID
@@ -73,10 +82,10 @@ public class JwtTokenUtil {
 				.signWith(SignatureAlgorithm.HS512, secret).compact();
 	}
 		
-	//validate token
+	// validate token
 	public Boolean validateToken(String token, UserDetails userDetails) {
 		final String username = getUsernameFromToken(token);
 		return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
-	}	
+	}
 	
 }
